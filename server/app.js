@@ -25,7 +25,8 @@ import {
   shoppingList,
   wouldCreateLoop,
 } from './bar.js';
-import { DEFAULT_SETTINGS, getSettings, saveSettings } from './db.js';
+import { cleanCustom, parseCustom, resolveTheme, THEMES } from '../shared/themes.js';
+import { DEFAULT_SETTINGS, FLAG_SETTINGS, getSettings, IMAGE_SETTINGS, saveSettings } from './db.js';
 import { fetchPublic } from './fetcher.js';
 import { buildDraft, extractRecipeFromHtml, parseRecipeText, UNITS } from './parse.js';
 import { slugify } from './seed.js';
@@ -85,7 +86,7 @@ export function createApp(db, { uploadDir }) {
   function imageInUse(url) {
     if (db.prepare('SELECT 1 FROM recipes WHERE image = ? LIMIT 1').get(url)) return true;
     const s = getSettings(db);
-    return [s.logo, s.icon192, s.icon512].includes(url);
+    return IMAGE_SETTINGS.some((key) => s[key] === url);
   }
 
   function discardImage(url) {
@@ -137,6 +138,13 @@ export function createApp(db, { uploadDir }) {
       logo: s.logo,
       tvInterval: Math.min(120, Math.max(5, Number(s.tv_interval) || 15)),
       tvMessage: s.tv_message,
+      tvBackground: s.tv_background,
+      tvLogoSlide: s.tv_logo_slide === '1',
+      tvBoardSlide: s.tv_board_slide === '1',
+      tvAllDrinks: s.tv_all_drinks === '1',
+      tvAnnouncement: s.tv_announcement,
+      theme: s.theme,
+      themeCustom: parseCustom(s.theme_custom),
       needsSetup: db.prepare('SELECT COUNT(*) AS n FROM users').get().n === 0,
     };
   };
@@ -786,10 +794,21 @@ export function createApp(db, { uploadDir }) {
       const patch = {};
       for (const key of Object.keys(DEFAULT_SETTINGS)) {
         if (req.body?.[key] === undefined) continue;
+        if (key === 'theme_custom') {
+          // Accepts the colours as an object; stored as tidy JSON.
+          const raw = req.body[key];
+          patch[key] = JSON.stringify(typeof raw === 'string' ? parseCustom(raw) : cleanCustom(raw));
+          continue;
+        }
+        if (FLAG_SETTINGS.includes(key)) {
+          patch[key] = req.body[key] === true || req.body[key] === '1' ? '1' : '0';
+          continue;
+        }
         let value = str(String(req.body[key]), 300);
-        if (['logo', 'icon192', 'icon512'].includes(key) && value && !isUpload(value)) {
+        if (IMAGE_SETTINGS.includes(key) && value && !isUpload(value)) {
           throw bad('Images must be uploaded first.');
         }
+        if (key === 'theme' && !THEMES.some((t) => t.key === value)) throw bad('Unknown theme.');
         if (key === 'units') value = value === 'ml' ? 'ml' : 'oz';
         if (key === 'bar_name' && !value) throw bad('The bar needs a name.');
         if (key === 'public_url' && value && !/^https?:\/\/[^\s/]+/i.test(value)) {
@@ -798,7 +817,7 @@ export function createApp(db, { uploadDir }) {
         patch[key] = value;
       }
       saveSettings(db, patch);
-      for (const key of ['logo', 'icon192', 'icon512']) {
+      for (const key of IMAGE_SETTINGS) {
         if (before[key] && patch[key] !== undefined && before[key] !== patch[key]) discardImage(before[key]);
       }
       res.json({ settings: getSettings(db) });
@@ -868,7 +887,7 @@ export function createApp(db, { uploadDir }) {
         /* file is gone; export the rest */
       }
     };
-    [settings.logo, settings.icon192, settings.icon512].forEach(addImage);
+    IMAGE_SETTINGS.forEach((key) => addImage(settings[key]));
     recipes.forEach((r) => addImage(r.image));
 
     return {
@@ -944,9 +963,7 @@ export function createApp(db, { uploadDir }) {
         const s = data.settings || {};
         saveSettings(db, {
           ...Object.fromEntries(Object.entries(s).filter(([, v]) => typeof v === 'string')),
-          logo: mapImage(s.logo) || '',
-          icon192: mapImage(s.icon192) || '',
-          icon512: mapImage(s.icon512) || '',
+          ...Object.fromEntries(IMAGE_SETTINGS.map((key) => [key, mapImage(s[key]) || ''])),
         });
 
         const typeIds = new Map();
@@ -1077,6 +1094,7 @@ export function createApp(db, { uploadDir }) {
   app.get('/manifest.webmanifest', (req, res) => {
     const s = getSettings(db);
     const v = encodeURIComponent(s.icon512 || 'default');
+    const theme = resolveTheme(s.theme, parseCustom(s.theme_custom));
     res.set('Cache-Control', 'no-cache');
     res.type('application/manifest+json').send(
       JSON.stringify({
@@ -1086,8 +1104,8 @@ export function createApp(db, { uploadDir }) {
         start_url: '/',
         scope: '/',
         display: 'standalone',
-        background_color: '#f4ead8',
-        theme_color: '#3a2416',
+        background_color: theme.bg,
+        theme_color: theme.header,
         icons: [
           { src: `/app-icon-192.png?v=${v}`, sizes: '192x192', type: 'image/png', purpose: 'any' },
           { src: `/app-icon-512.png?v=${v}`, sizes: '512x512', type: 'image/png', purpose: 'any' },

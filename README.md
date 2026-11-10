@@ -12,7 +12,10 @@ get a live menu that only lists the drinks you can make right now.
 - **Recipes** with picture, description, ingredients, steps, categories, tags and a "featured" pin.
   Import from a recipe link or pasted text.
 - **Shopping** list of what is low or out, plus single purchases that would unlock new drinks.
-- **TV display** at `/tv`: logo, rotating featured drinks and a QR code for the menu.
+- **TV display** at `/tv`: featured drinks, a full-screen logo slide, a menu board, an optional
+  announcement, and a QR code for the menu.
+- **Themes**: eight colour themes, including Halloween, Thanksgiving, Christmas and New Year's,
+  each with adjustable colours.
 - **Installable** as an app on a phone (PWA).
 - Backup and restore as one JSON file.
 
@@ -81,6 +84,13 @@ a restore file can be large, so raise the proxy's body size limit if a restore f
 - A drink is on the menu when every ingredient not marked **optional** is In or Low, and the
   recipe is not hidden. Garnishes default to optional.
 
+## Themes
+
+**Settings > Appearance** changes the colours of the menu, the admin pages and the TV. Pick a
+theme to preview it on that screen, adjust any of the five base colours if you like, then save.
+Text colours are worked out automatically so they stay readable. The themes are defined in
+`shared/themes.js`; adding one is a matter of adding an entry there.
+
 ## Importing recipes
 
 On **New recipe**, paste a link or the recipe text and press Import. There is no AI involved:
@@ -97,8 +107,15 @@ before saving.
 
 ## The TV
 
-`/tv` is a full-screen page made for a 16:9 screen. It shows featured drinks, or the whole menu
-if nothing is featured, and refreshes itself.
+`/tv` is a full-screen page made for a 16:9 screen. It rotates through slides and refreshes
+itself, so changes made in Settings reach the TV within a minute. In **Settings > TV display**
+you choose what it shows:
+
+- one slide per featured drink (name, description and picture), or every available drink;
+- a full-screen logo slide;
+- a menu board listing everything available tonight;
+- an announcement slide with your own text;
+- an optional background picture in place of the theme colour.
 
 - **From a laptop:** open `/tv` in Chrome and use Cast > Cast tab.
 - **From Home Assistant:** the built-in Cast integration only casts Home Assistant dashboards.

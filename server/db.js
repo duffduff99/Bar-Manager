@@ -124,7 +124,19 @@ export const DEFAULT_SETTINGS = {
   public_url: '',
   tv_interval: '15',
   tv_message: 'Scan for the full menu',
+  tv_background: '',
+  tv_logo_slide: '1',
+  tv_board_slide: '1',
+  tv_all_drinks: '0',
+  tv_announcement: '',
+  theme: 'classic',
+  theme_custom: '{}',
 };
+
+/** Settings that hold an uploaded picture. */
+export const IMAGE_SETTINGS = ['logo', 'icon192', 'icon512', 'tv_background'];
+/** Settings stored as '1' or '0'. */
+export const FLAG_SETTINGS = ['tv_logo_slide', 'tv_board_slide', 'tv_all_drinks'];
 
 export function getSettings(db) {
   const out = { ...DEFAULT_SETTINGS };

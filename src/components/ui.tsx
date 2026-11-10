@@ -1,8 +1,23 @@
 import { useEffect, type ReactNode } from 'react';
 import type { Status } from '../api';
+import { useApp } from '../app';
 
 /** The atomic-age star used as the app's decorative mark. */
 export function Starburst({ className = '' }: { className?: string }) {
+  const { motif } = useApp();
+  if (motif === 'snow') {
+    // Six arms, each with two pairs of side branches.
+    const arm = 'M50 50 V6 M50 18 L41 9 M50 18 L59 9 M50 31 L40 21 M50 31 L60 21';
+    return (
+      <svg className={`starburst ${className}`} viewBox="0 0 100 100" aria-hidden="true">
+        <g fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round">
+          {[0, 60, 120, 180, 240, 300].map((angle) => (
+            <path key={angle} d={arm} transform={`rotate(${angle} 50 50)`} />
+          ))}
+        </g>
+      </svg>
+    );
+  }
   const rays = [];
   for (let i = 0; i < 8; i++) {
     const long = i % 2 === 0;
@@ -22,13 +37,14 @@ export function Starburst({ className = '' }: { className?: string }) {
   );
 }
 
+// Background, line and accent for the stand-in artwork, all taken from the theme.
 const PALETTES = [
-  ['#2f6f73', '#f4ead8', '#d9a441'],
-  ['#c8553d', '#f4ead8', '#f0c96b'],
-  ['#d9a441', '#3a2416', '#c8553d'],
-  ['#7a8450', '#f4ead8', '#f0c96b'],
-  ['#3a2416', '#f4ead8', '#d9a441'],
-  ['#245559', '#f4ead8', '#e98a5c'],
+  ['var(--highlight)', 'var(--on-highlight)', 'var(--accent)'],
+  ['var(--primary)', 'var(--on-primary)', 'var(--accent)'],
+  ['var(--accent)', 'var(--on-accent)', 'var(--primary)'],
+  ['var(--art)', 'var(--on-art)', 'var(--accent)'],
+  ['var(--header-deep)', 'var(--on-header)', 'var(--accent)'],
+  ['var(--header)', 'var(--on-header)', 'var(--primary)'],
 ];
 
 function hash(text: string): number {
@@ -51,33 +67,33 @@ export function DrinkArt({ title, glass }: { title: string; glass: string }) {
 
   return (
     <svg className="drink-art" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
-      <rect width="400" height="300" fill={bg} />
-      <ellipse cx={flip ? 95 : 305} cy="215" rx="150" ry="62" fill={accent} opacity="0.2" transform={`rotate(${flip ? -24 : 24} ${flip ? 95 : 305} 215)`} />
-      <g transform={`translate(${flip ? 268 : 52} 36) scale(0.8)`} color={accent}>
+      <rect width="400" height="300" style={{ fill: bg }} />
+      <ellipse cx={flip ? 95 : 305} cy="215" rx="150" ry="62" style={{ fill: accent }} opacity="0.2" transform={`rotate(${flip ? -24 : 24} ${flip ? 95 : 305} 215)`} />
+      <g transform={`translate(${flip ? 268 : 52} 36) scale(0.8)`} style={{ color: accent }}>
         <g fill="currentColor">
           {[0, 45, 90, 135].map((a) => (
             <path key={a} d="M50 2 L53 50 L50 98 L47 50 Z" transform={`rotate(${a} 50 50)`} />
           ))}
         </g>
       </g>
-      <g fill="none" stroke={line} strokeWidth="5" strokeLinejoin="round" strokeLinecap="round">
+      <g fill="none" style={{ stroke: line }} strokeWidth="5" strokeLinejoin="round" strokeLinecap="round">
         {shape === 'coupe' && (
           <>
-            <path d="M138 96 H262 A62 56 0 0 1 138 96 Z" fill={line} fillOpacity="0.16" />
+            <path d="M138 96 H262 A62 56 0 0 1 138 96 Z" style={{ fill: line }} fillOpacity="0.16" />
             <path d="M200 152 V228 M168 230 H232" />
-            <circle cx="232" cy="92" r="9" fill={accent} stroke="none" />
+            <circle cx="232" cy="92" r="9" style={{ fill: accent, stroke: 'none' }} />
           </>
         )}
         {shape === 'tall' && (
           <>
-            <path d="M166 70 H234 L228 228 H172 Z" fill={line} fillOpacity="0.16" />
+            <path d="M166 70 H234 L228 228 H172 Z" style={{ fill: line }} fillOpacity="0.16" />
             <path d="M170 112 H230" strokeWidth="3" opacity="0.7" />
-            <path d="M214 46 L204 150" strokeWidth="4" stroke={accent} />
+            <path d="M214 46 L204 150" strokeWidth="4" style={{ stroke: accent }} />
           </>
         )}
         {shape === 'rocks' && (
           <>
-            <path d="M150 116 H250 L242 226 H158 Z" fill={line} fillOpacity="0.16" />
+            <path d="M150 116 H250 L242 226 H158 Z" style={{ fill: line }} fillOpacity="0.16" />
             <rect x="176" y="150" width="42" height="42" rx="5" strokeWidth="3" opacity="0.8" transform="rotate(-10 197 171)" />
             <path d="M154 146 H246" strokeWidth="3" opacity="0.7" />
           </>
