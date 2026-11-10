@@ -1,0 +1,19 @@
+services:
+  bar-manager:
+    build: .
+    image: bar-manager:latest
+    container_name: bar-manager
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      # Only used until you change the name in Settings.
+      BAR_NAME: "DuffBar"
+      # Optional: create the first admin here instead of on the setup screen.
+      # ADMIN_USERNAME: "admin"
+      # ADMIN_PASSWORD: "change-me-please"
+    volumes:
+      - bar-data:/data
+
+volumes:
+  bar-data:
