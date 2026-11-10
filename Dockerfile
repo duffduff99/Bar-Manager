@@ -18,6 +18,7 @@ COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY package.json ./
 COPY server ./server
+COPY shared ./shared
 # The database and uploaded pictures live in /data; mount a volume there.
 RUN mkdir -p /data && chown node:node /data
 USER node

@@ -1,3 +1,5 @@
+import type { CustomColours } from '../shared/themes';
+
 export type Units = 'oz' | 'ml';
 export type Status = 'none' | 'in' | 'low' | 'out';
 export type BottleStatus = 'in' | 'low' | 'out';
@@ -9,6 +11,13 @@ export interface Config {
   logo: string;
   tvInterval: number;
   tvMessage: string;
+  tvBackground: string;
+  tvLogoSlide: boolean;
+  tvBoardSlide: boolean;
+  tvAllDrinks: boolean;
+  tvAnnouncement: string;
+  theme: string;
+  themeCustom: CustomColours;
   needsSetup: boolean;
 }
 
@@ -158,6 +167,14 @@ export interface Settings {
   public_url: string;
   tv_interval: string;
   tv_message: string;
+  tv_background: string;
+  tv_logo_slide: string;
+  tv_board_slide: string;
+  tv_all_drinks: string;
+  tv_announcement: string;
+  theme: string;
+  /** JSON text when read; send an object when saving. */
+  theme_custom: string | CustomColours;
 }
 
 export class ApiError extends Error {

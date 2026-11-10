@@ -338,3 +338,33 @@ test('the manifest and QR code follow the settings', async () => {
   assert.match(await qr.text(), /<svg/);
   assert.equal((await call('PUT', '/api/admin/settings', { public_url: 'not a url' })).status, 400);
 });
+
+test('themes and TV options are validated and reach the public config', async () => {
+  assert.equal((await call('PUT', '/api/admin/settings', { theme: 'nope' })).status, 400);
+  const saved = await call('PUT', '/api/admin/settings', {
+    theme: 'christmas',
+    theme_custom: { accent: '#FFCC00', bg: 'javascript:alert(1)', other: '#000000' },
+    tv_logo_slide: false,
+    tv_all_drinks: true,
+    tv_announcement: 'Happy holidays',
+  });
+  assert.equal(saved.status, 200);
+  const config = (await call('GET', '/api/public/config')).data;
+  assert.equal(config.theme, 'christmas');
+  assert.deepEqual(config.themeCustom, { accent: '#ffcc00' }, 'only well-formed known colours are kept');
+  assert.equal(config.tvLogoSlide, false);
+  assert.equal(config.tvBoardSlide, true);
+  assert.equal(config.tvAllDrinks, true);
+  assert.equal(config.tvAnnouncement, 'Happy holidays');
+  const manifest = await (await fetch(base + '/manifest.webmanifest')).json();
+  assert.equal(manifest.theme_color, '#185c3d', 'the installed app picks up the theme colour');
+});
+
+test('an ingredient can be deleted once no recipe uses it', async () => {
+  const added = await call('POST', '/api/admin/types', { name: 'Banana Liqueur', kind: 'liqueur', status: 'in' });
+  assert.equal(added.status, 200);
+  await call('POST', '/api/admin/bottles', { typeId: added.data.id, name: 'Giffard' });
+  const removed = await call('DELETE', `/api/admin/types/${added.data.id}`);
+  assert.equal(removed.status, 200);
+  assert.ok(!removed.data.types.some((t) => t.name === 'Banana Liqueur'));
+});

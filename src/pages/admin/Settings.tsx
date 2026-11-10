@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { CUSTOM_KEYS, parseCustom, resolveTheme, THEMES, type CustomColours } from '../../../shared/themes';
 import { api, get, type Settings, type User } from '../../api';
 import { useApp } from '../../app';
 import { Loading } from '../../components/ui';
@@ -29,7 +30,9 @@ function BarSettings() {
     setBusy(true);
     try {
       const data = await api<{ settings: Settings }>('PUT', '/api/admin/settings', patch);
-      setSettings(data.settings);
+      // Only take back the fields that were just saved, so half-typed edits elsewhere survive.
+      const saved = Object.fromEntries(Object.keys(patch).map((key) => [key, data.settings[key as keyof Settings]]));
+      setSettings((current) => (current ? { ...current, ...saved } : data.settings));
       await reloadConfig();
       setQrVersion((v) => v + 1);
       toast(message);
@@ -42,8 +45,8 @@ function BarSettings() {
 
   const save = (event: FormEvent) => {
     event.preventDefault();
-    const { bar_name, tagline, units, public_url, tv_interval, tv_message } = settings;
-    void store({ bar_name, tagline, units, public_url, tv_interval, tv_message }, 'Settings saved.');
+    const { bar_name, tagline, units, public_url, tv_interval, tv_message, tv_announcement } = settings;
+    void store({ bar_name, tagline, units, public_url, tv_interval, tv_message, tv_announcement }, 'Settings saved.');
   };
 
   const pickLogo = async (file: File | undefined) => {
@@ -62,6 +65,29 @@ function BarSettings() {
       setBusy(false);
     }
   };
+
+  const pickBackground = async (file: File | undefined) => {
+    if (!file) return;
+    setBusy(true);
+    try {
+      await store({ tv_background: await upload(await shrink(file, 1920, 'image/jpeg')) }, 'TV background updated.');
+    } catch (e) {
+      fail(e);
+      setBusy(false);
+    }
+  };
+
+  const flag = (key: 'tv_logo_slide' | 'tv_board_slide' | 'tv_all_drinks', label: string) => (
+    <label className="check">
+      <input
+        type="checkbox"
+        checked={settings[key] === '1'}
+        disabled={busy}
+        onChange={(e) => store({ [key]: e.target.checked ? '1' : '0' }, 'TV display updated.')}
+      />
+      <span>{label}</span>
+    </label>
+  );
 
   const address = settings.public_url || window.location.origin;
 
@@ -103,7 +129,7 @@ function BarSettings() {
               </button>
             )}
             <small className="muted">
-              Shown on the menu header (dark wood background) and the TV, and used as the app icon. A PNG with a
+              Shown on the menu header (a dark background) and the TV, and used as the app icon. A PNG with a
               transparent background works best.
             </small>
           </div>
@@ -134,7 +160,7 @@ function BarSettings() {
       <h2>TV display</h2>
       <div className="field-row">
         <label className="field">
-          <span>Seconds per drink</span>
+          <span>Seconds per slide</span>
           <input
             type="number"
             min={5}
@@ -147,6 +173,57 @@ function BarSettings() {
           <span>Text next to the QR code</span>
           <input value={settings.tv_message} onChange={(e) => set({ tv_message: e.target.value })} maxLength={60} />
         </label>
+      </div>
+      <label className="field">
+        <span>Announcement slide (optional)</span>
+        <input
+          value={settings.tv_announcement}
+          onChange={(e) => set({ tv_announcement: e.target.value })}
+          maxLength={120}
+          placeholder="Happy birthday, Sam!"
+        />
+        <small>Shown full screen as its own slide. Leave empty for none.</small>
+      </label>
+      <div className="field">
+        <span>What the TV rotates through</span>
+        {flag('tv_logo_slide', 'A full-screen logo slide')}
+        {flag('tv_board_slide', 'A menu board listing every drink available tonight')}
+        {flag('tv_all_drinks', 'Every available drink, not only the featured ones')}
+        <small>
+          Featured drinks always get a slide each. With nothing featured, the TV shows every available drink.
+        </small>
+      </div>
+      <div className="field">
+        <span>TV background picture (optional)</span>
+        <div className="logo-input">
+          <div
+            className="tv-bg-preview"
+            style={settings.tv_background ? { backgroundImage: `url("${settings.tv_background}")` } : undefined}
+          />
+          <div className="image-buttons">
+            <label className="btn">
+              {settings.tv_background ? 'Change picture' : 'Upload a picture'}
+              <input
+                type="file"
+                accept="image/*"
+                hidden
+                disabled={busy}
+                onChange={(e) => {
+                  void pickBackground(e.target.files?.[0]);
+                  e.target.value = '';
+                }}
+              />
+            </label>
+            {settings.tv_background && (
+              <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => store({ tv_background: '' }, 'TV background removed.')}>
+                Remove
+              </button>
+            )}
+            <small className="muted">
+              Without a picture the TV uses the theme’s header colour. A picture is darkened so the text stays readable.
+            </small>
+          </div>
+        </div>
       </div>
       <div className="qr-preview">
         <img src={`/api/qr.svg?v=${qrVersion}`} alt="QR code for the menu" />
@@ -167,6 +244,117 @@ function BarSettings() {
         </button>
       </div>
     </form>
+  );
+}
+
+const COLOUR_LABELS: Record<keyof CustomColours, string> = {
+  header: 'Header and TV',
+  accent: 'Accent',
+  primary: 'Buttons',
+  highlight: 'Highlights',
+  bg: 'Page background',
+};
+
+function Appearance() {
+  const { config, fail, toast, reloadConfig, previewTheme } = useApp();
+  const [theme, setTheme] = useState(config.theme);
+  const [custom, setCustom] = useState<CustomColours>(config.themeCustom);
+  const [busy, setBusy] = useState(false);
+
+  // Leaving the page drops any colours that were tried but not saved.
+  useEffect(() => () => previewTheme(), [previewTheme]);
+
+  const show = (key: string, colours: CustomColours) => {
+    setTheme(key);
+    setCustom(colours);
+    previewTheme(key, colours);
+  };
+
+  const save = async () => {
+    setBusy(true);
+    try {
+      const data = await api<{ settings: Settings }>('PUT', '/api/admin/settings', { theme, theme_custom: custom });
+      await reloadConfig();
+      setCustom(parseCustom(String(data.settings.theme_custom)));
+      previewTheme();
+      toast('Appearance saved. Guests and the TV pick it up within a minute.');
+    } catch (e) {
+      fail(e);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const resolved = resolveTheme(theme, custom);
+  const changed = theme !== config.theme || JSON.stringify(custom) !== JSON.stringify(config.themeCustom);
+  const groups = [...new Set(THEMES.map((t) => t.group))];
+
+  return (
+    <section className="panel">
+      <h2>Appearance</h2>
+      <p className="muted">
+        Pick a theme to try it on this screen, then save. It changes the menu, the admin pages and the TV.
+      </p>
+      {groups.map((group) => (
+        <div key={group}>
+          <div className="theme-group">{group}</div>
+          <div className="theme-grid">
+            {THEMES.filter((t) => t.group === group).map((t) => (
+              <button
+                type="button"
+                key={t.key}
+                className={theme === t.key ? 'theme-card active' : 'theme-card'}
+                aria-pressed={theme === t.key}
+                // Choosing a theme starts from its own colours.
+                onClick={() => show(t.key, {})}
+              >
+                <span className="theme-swatch" style={{ background: `linear-gradient(180deg, ${t.header}, ${t.headerDeep})` }}>
+                  <i style={{ left: 10, background: t.accent }} />
+                  <i style={{ left: 36, background: t.primary }} />
+                  <i style={{ left: 62, background: t.highlight }} />
+                </span>
+                <span className="theme-page" style={{ background: t.bg, color: t.ink }}>
+                  {t.name}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+
+      <div className="theme-group">Fine-tune the colours</div>
+      <div className="colour-row">
+        {CUSTOM_KEYS.map((key) => (
+          <label key={key} className="colour-pick">
+            <input
+              type="color"
+              value={custom[key] ?? resolved[key]}
+              onChange={(e) => show(theme, { ...custom, [key]: e.target.value })}
+            />
+            {COLOUR_LABELS[key]}
+          </label>
+        ))}
+      </div>
+      <p className="muted">
+        Text colours adjust on their own to stay readable, including when you choose a dark page background.
+      </p>
+
+      <div className="form-actions">
+        <button type="button" className="btn btn-primary" disabled={busy || !changed} onClick={save}>
+          Save appearance
+        </button>
+        {Object.keys(custom).length > 0 && (
+          <button type="button" className="btn" disabled={busy} onClick={() => show(theme, {})}>
+            Reset to the theme’s colours
+          </button>
+        )}
+        {changed && (
+          <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => show(config.theme, config.themeCustom)}>
+            Undo changes
+          </button>
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -411,6 +599,7 @@ export function SettingsPage() {
         <h1>Settings</h1>
       </div>
       <BarSettings />
+      <Appearance />
       <Categories />
       <Users />
       <Backup />

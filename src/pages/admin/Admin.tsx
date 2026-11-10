@@ -159,12 +159,19 @@ function TypeEditor({
               We don’t carry this
             </button>
           )}
-          {type && (
+          {type && type.recipeCount === 0 && (
             <button type="button" className="btn btn-danger" onClick={remove}>
               Delete
             </button>
           )}
         </div>
+        {type && type.recipeCount > 0 && (
+          <p className="hint">
+            {type.name} is used in {type.recipeCount} {type.recipeCount === 1 ? 'recipe' : 'recipes'}, so it cannot be
+            deleted: those drinks would lose an ingredient. Use “We don’t carry this” to take it off your list, or
+            remove it from the recipes first.
+          </p>
+        )}
       </form>
 
       {type && type.bottles.length > 0 && (
@@ -247,6 +254,13 @@ export function InventoryPage() {
         ),
       api<TypesReply>('PUT', `/api/admin/bottles/${id}`, { status }),
     );
+
+  const removeBottle = (id: number, name: string) => {
+    if (!confirm(`Remove ${name} from your inventory?`)) return;
+    api<TypesReply>('DELETE', `/api/admin/bottles/${id}`)
+      .then((r) => setTypes(r.types))
+      .catch(fail);
+  };
 
   const addBottle = async (event: FormEvent, typeId: number) => {
     event.preventDefault();
@@ -369,6 +383,15 @@ export function InventoryPage() {
                       {!t.alwaysAvailable && t.bottles.length === 0 && (
                         <StatusToggle value={t.status} label={t.name} onChange={(s) => setTypeStatus(t.id, s)} />
                       )}
+                      <button
+                        type="button"
+                        className="icon-btn inv-edit"
+                        aria-label={`Edit or delete ${t.name}`}
+                        title="Edit or delete"
+                        onClick={() => setEditing(t.id)}
+                      >
+                        ✎
+                      </button>
                       {!t.alwaysAvailable && (
                         <button
                           type="button"
@@ -389,6 +412,15 @@ export function InventoryPage() {
                           <span>{b.name}</span>
                         </span>
                         <StatusToggle value={b.status} label={b.name} onChange={(s) => setBottleStatus(t.id, b.id, s)} />
+                        <button
+                          type="button"
+                          className="icon-btn inv-edit"
+                          aria-label={`Remove ${b.name}`}
+                          title="Remove this bottle"
+                          onClick={() => removeBottle(b.id, b.name)}
+                        >
+                          ✕
+                        </button>
                       </div>
                     ))}
                     {addingTo === t.id && (

@@ -3,11 +3,13 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   type ReactNode,
 } from 'react';
+import { resolveTheme, themeVariables, type CustomColours } from '../shared/themes';
 import { get, type Config, type Menu, type Units, type User } from './api';
 
 declare global {
@@ -23,8 +25,28 @@ const FALLBACK: Config = {
   logo: '',
   tvInterval: 15,
   tvMessage: 'Scan for the full menu',
+  tvBackground: '',
+  tvLogoSlide: true,
+  tvBoardSlide: true,
+  tvAllDrinks: false,
+  tvAnnouncement: '',
+  theme: 'classic',
+  themeCustom: {},
   needsSetup: false,
 };
+
+/** Paint the page in a theme by setting the CSS variables the stylesheet reads. */
+export function applyTheme(key: string, custom: CustomColours): 'burst' | 'snow' {
+  const theme = resolveTheme(key, custom);
+  const root = document.documentElement;
+  for (const [name, value] of Object.entries(themeVariables(theme))) root.style.setProperty(name, value);
+  root.style.colorScheme = theme.dark ? 'dark' : 'light';
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme.header);
+  return theme.motif;
+}
+
+// Before the first paint, so the page never flashes the default colours.
+if (window.__BAR__) applyTheme(window.__BAR__.theme, window.__BAR__.themeCustom);
 
 interface Toast {
   id: number;
@@ -40,6 +62,10 @@ interface AppState {
   setUser: (user: User | null) => void;
   units: Units;
   setUnits: (units: Units) => void;
+  /** Which decorative mark the current theme uses. */
+  motif: 'burst' | 'snow';
+  /** Try colours on screen without saving them. Pass nothing to go back to the saved theme. */
+  previewTheme: (key?: string, custom?: CustomColours) => void;
   toast: (text: string, bad?: boolean) => void;
   /** Report a failed request to the person using the app. */
   fail: (error: unknown) => void;
@@ -68,6 +94,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [authReady, setAuthReady] = useState(false);
   const [unitChoice, setUnitChoice] = useState<Units | null>(storedUnits);
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [preview, setPreview] = useState<{ key: string; custom: CustomColours } | null>(null);
+  const [motif, setMotif] = useState<'burst' | 'snow'>('burst');
+
+  const themeKey = preview?.key ?? config.theme;
+  const themeCustom = preview?.custom ?? config.themeCustom;
+  useLayoutEffect(() => {
+    setMotif(applyTheme(themeKey, themeCustom));
+  }, [themeKey, themeCustom]);
+
+  const previewTheme = useCallback((key?: string, custom?: CustomColours) => {
+    setPreview(key === undefined ? null : { key, custom: custom ?? {} });
+  }, []);
   const nextId = useRef(1);
 
   const reloadConfig = useCallback(async () => {
@@ -122,10 +160,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setUser,
       units: unitChoice ?? config.units,
       setUnits,
+      motif,
+      previewTheme,
       toast,
       fail,
     }),
-    [config, reloadConfig, user, authReady, unitChoice, setUnits, toast, fail],
+    [config, reloadConfig, user, authReady, unitChoice, setUnits, motif, previewTheme, toast, fail],
   );
 
   return (
