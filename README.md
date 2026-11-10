@@ -38,7 +38,9 @@ tap **In** on what you have.
 
 Create a stack from this Git repository and point it at `compose.yaml`. The compose file builds
 the image from the `Dockerfile` in the repo, so the Docker host needs internet access during the
-build. After pulling new commits, redeploy with a rebuild so the image is refreshed.
+build. `pull_policy: build` in the compose file makes every deploy rebuild the image from the
+current source, so redeploying after new commits is enough to update. Unchanged layers are
+cached, so a redeploy with no changes takes seconds.
 
 ### Settings
 
