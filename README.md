@@ -39,11 +39,22 @@ build. After pulling new commits, redeploy with a rebuild so the image is refres
 
 ### Settings
 
+`compose.yaml` reads these from the stack's environment variables (in Dockhand, the stack's
+environment settings; with plain Docker Compose, a `.env` file next to `compose.yaml`), so the
+file itself never needs editing:
+
+| Variable | Default | What it does |
+| --- | --- | --- |
+| `BAR_PORT` | `3000` | Port on the Docker host that the app is reachable on. |
+| `BAR_NAME` | `Home Bar` | Name shown until you set one in Settings. |
+| `ADMIN_USERNAME`, `ADMIN_PASSWORD` | unset | Create the first admin at startup instead of using the setup screen. Ignored once any account exists. |
+
+The container also understands these, which are not wired into `compose.yaml` because they
+rarely need changing:
+
 | Variable | Default | What it does |
 | --- | --- | --- |
 | `PORT` | `3000` | Port the app listens on inside the container. |
-| `BAR_NAME` | `Home Bar` | Name shown until you set one in Settings. |
-| `ADMIN_USERNAME`, `ADMIN_PASSWORD` | unset | Create the first admin at startup instead of using the setup screen. Ignored once any account exists. |
 | `SEED` | `true` | Set to `false` to start with no ingredients or recipes. Only read when the database is first created. |
 | `TRUST_PROXY` | `1` | Number of reverse proxies in front of the app. |
 | `ALLOW_PRIVATE_IMPORT` | `false` | Allow recipe import from addresses on your own network. |

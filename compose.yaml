@@ -1,3 +1,5 @@
+# Every value below can be changed without editing this file: set the variable
+# in your stack's environment settings (or in a .env file next to this one).
 services:
   bar-manager:
     build: .
@@ -5,13 +7,14 @@ services:
     container_name: bar-manager
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      # BAR_PORT is the port on the Docker host. The app stays on 3000 inside the container.
+      - "${BAR_PORT:-3000}:3000"
     environment:
       # Only used until you change the name in Settings.
-      BAR_NAME: "DuffBar"
-      # Optional: create the first admin here instead of on the setup screen.
-      # ADMIN_USERNAME: "admin"
-      # ADMIN_PASSWORD: "change-me-please"
+      BAR_NAME: "${BAR_NAME:-Home Bar}"
+      # Optional: create the first admin at startup instead of on the setup screen.
+      ADMIN_USERNAME: "${ADMIN_USERNAME:-}"
+      ADMIN_PASSWORD: "${ADMIN_PASSWORD:-}"
     volumes:
       - bar-data:/data
 
