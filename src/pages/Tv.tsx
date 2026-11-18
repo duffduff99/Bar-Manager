@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { MenuRecipe } from '../api';
 import { useApp, useMenu } from '../app';
 import { DrinkImage, Starburst } from '../components/ui';
 
-const BOARD_PAGE = 21; // drink names per menu-board slide (3 columns of 7)
+const BOARD_PAGE = 24; // most drink names on one menu-board slide (3 columns of 8)
 
 type Slide =
   | { kind: 'logo'; id: string }
@@ -15,6 +15,46 @@ type Slide =
 function fitSize(name: string, width: number, max: number): number {
   const longest = Math.max(1, ...name.split(/\s+/).map((word) => word.length));
   return Math.min(max, width / (longest * 0.9));
+}
+
+/**
+ * Text that starts at `max` (in vw) and shrinks until it fits its box, so long
+ * names and descriptions are never cut off. It re-checks when the window
+ * changes size or the web fonts finish loading.
+ */
+function Fit({ max, min, className, children }: { max: number; min: number; className: string; children: ReactNode }) {
+  const box = useRef<HTMLDivElement>(null);
+  const [tick, setTick] = useState(0);
+
+  useLayoutEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    let size = max;
+    el.style.fontSize = `${size}vw`;
+    const overflowing = () => el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1;
+    while (overflowing() && size > min) {
+      size = Math.max(min, size * 0.94);
+      el.style.fontSize = `${size}vw`;
+    }
+  }, [max, min, children, tick]);
+
+  useEffect(() => {
+    const again = () => setTick((t) => t + 1);
+    window.addEventListener('resize', again);
+    void document.fonts?.ready.then(again);
+    return () => window.removeEventListener('resize', again);
+  }, []);
+
+  return (
+    <div ref={box} className={`tv-fit ${className}`}>
+      {children}
+    </div>
+  );
+}
+
+/** Fewer, wider columns when there are only a few drinks. */
+function columnsFor(count: number): number {
+  return count <= 6 ? 1 : count <= 14 ? 2 : 3;
 }
 
 function Clock() {
@@ -55,7 +95,9 @@ function SlideView({ slide }: { slide: Slide }) {
     return (
       <div className="tv-slide tv-message-slide">
         <Starburst className="tv-logo-star" />
-        <h2 style={{ fontSize: `${Math.max(3, Math.min(6.5, 130 / slide.text.length))}vw` }}>{slide.text}</h2>
+        <Fit max={6.5} min={2.2} className="tv-message-fit">
+          <h2>{slide.text}</h2>
+        </Fit>
       </div>
     );
   }
@@ -63,11 +105,13 @@ function SlideView({ slide }: { slide: Slide }) {
     return (
       <div className="tv-slide tv-board-slide">
         <div className="tv-kicker">On the menu tonight</div>
-        <ul className="tv-board">
-          {slide.names.map((name) => (
-            <li key={name}>{name}</li>
-          ))}
-        </ul>
+        <Fit max={2.4} min={1.1} className="tv-board-fit">
+          <ul className={`tv-board tv-board-${columnsFor(slide.names.length)}`}>
+            {slide.names.map((name) => (
+              <li key={name}>{name}</li>
+            ))}
+          </ul>
+        </Fit>
         {slide.pages > 1 && (
           <div className="tv-board-page">
             {slide.page} of {slide.pages}
@@ -84,8 +128,14 @@ function SlideView({ slide }: { slide: Slide }) {
       </div>
       <div className="tv-copy">
         <div className="tv-kicker">{recipe.featured ? 'Featured tonight' : 'On the menu'}</div>
-        <h2 style={{ fontSize: `${fitSize(recipe.title, 30, 5.6)}vw` }}>{recipe.title}</h2>
-        {recipe.description && <p className="tv-description">{recipe.description}</p>}
+        <Fit max={fitSize(recipe.title, 30, 5.6)} min={2.4} className="tv-title-fit">
+          <h2>{recipe.title}</h2>
+        </Fit>
+        {recipe.description && (
+          <Fit max={2.1} min={1.2} className="tv-description-fit">
+            <p className="tv-description">{recipe.description}</p>
+          </Fit>
+        )}
       </div>
     </div>
   );
@@ -110,11 +160,13 @@ export function TvPage() {
     if (config.tvBoardSlide && all.length) {
       const names = all.map((r) => r.title);
       const pages = Math.ceil(names.length / BOARD_PAGE);
+      // Spread the names evenly, so 26 drinks become 13 + 13 rather than 24 + 2.
+      const perPage = Math.ceil(names.length / pages);
       for (let page = 0; page < pages; page++) {
         out.push({
           kind: 'board',
           id: `board-${page}`,
-          names: names.slice(page * BOARD_PAGE, (page + 1) * BOARD_PAGE),
+          names: names.slice(page * perPage, (page + 1) * perPage),
           page: page + 1,
           pages,
         });

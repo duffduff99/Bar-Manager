@@ -1834,7 +1834,9 @@ body.tv-body {
   position: fixed;
   inset: 0;
   display: grid;
-  grid-template-columns: 30vw 1fr;
+  /* minmax(0, …) stops a long drink name from widening the column past the screen edge. */
+  grid-template-columns: 30vw minmax(0, 1fr);
+  grid-template-rows: 100vh;
   background: var(--wood);
   color: var(--on-header);
   overflow: hidden;
@@ -1843,7 +1845,7 @@ body.tv-body {
 
 /* Logo and announcement slides take the whole screen. */
 .tv.tv-wide {
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .tv.tv-wide .tv-side {
@@ -1967,8 +1969,18 @@ body.tv-body {
 .tv-stage {
   position: relative;
   display: grid;
-  place-items: center;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
   padding: 6vh 4vw 8vh;
+}
+
+/* A box that the text inside is shrunk to fit (see Fit in Tv.tsx). */
+.tv-fit {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 @keyframes tv-in {
@@ -1993,14 +2005,37 @@ body.tv-body {
 
 .tv-slide {
   width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
   animation: tv-in 1.2s ease both;
 }
 
 .tv-drink-slide {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 3.5vw;
   align-items: center;
+}
+
+.tv-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  max-height: 100%;
+  min-height: 0;
+}
+
+.tv-title-fit {
+  width: 100%;
+  max-height: 34vh;
+  flex: none;
+  margin: 3vh 0 2.4vh;
+}
+
+.tv-description-fit {
+  width: 100%;
+  max-height: 40vh;
 }
 
 .tv-photo {
@@ -2031,15 +2066,16 @@ body.tv-body {
 }
 
 .tv-copy h2 {
-  margin: 3vh 0 2.4vh;
-  line-height: 1;
+  margin: 0;
+  font-size: 1em;
+  line-height: 1.02;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   overflow-wrap: break-word;
 }
 
 .tv-description {
-  font-size: 2.1vw;
+  font-size: 1em;
   line-height: 1.35;
   color: var(--on-header);
   opacity: 0.88;
@@ -2072,38 +2108,65 @@ body.tv-body {
   margin-top: 3vh;
 }
 
+.tv-message-fit {
+  max-width: 80vw;
+  max-height: 62vh;
+  text-align: center;
+}
+
 .tv-message-slide h2 {
-  max-width: 56vw;
+  margin: 0;
+  font-size: 1em;
   line-height: 1.1;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
 .tv-board-slide {
-  align-self: center;
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.tv-board-fit {
+  width: 100%;
+  max-height: 64vh;
+  margin-top: 4vh;
 }
 
 .tv-board {
   list-style: none;
-  margin: 4vh 0 0;
+  margin: 0;
   padding: 0;
-  columns: 3;
   column-gap: 3vw;
   text-align: left;
 }
 
+.tv-board-1 {
+  columns: 1;
+  max-width: 34em;
+  margin: 0 auto;
+}
+
+.tv-board-2 {
+  columns: 2;
+}
+
+.tv-board-3 {
+  columns: 3;
+}
+
 .tv-board li {
   break-inside: avoid;
-  padding: 1.5vh 0 1.1vh;
+  padding: 0.62em 0 0.45em;
   border-bottom: 1px solid rgba(255, 255, 255, 0.2);
   font-family: var(--display);
   font-weight: 600;
-  font-size: 1.9vw;
+  line-height: 1.15;
   letter-spacing: 0.04em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* Long names wrap onto a second line instead of running off the edge. */
+  overflow-wrap: break-word;
 }
 
 .tv-board-page {
@@ -2115,6 +2178,8 @@ body.tv-body {
 .tv-dots {
   position: absolute;
   bottom: 3.4vh;
+  left: 50%;
+  transform: translateX(-50%);
   display: flex;
   gap: 0.8vw;
 }
