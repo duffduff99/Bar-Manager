@@ -1074,26 +1074,19 @@ export function createApp(db, { uploadDir }) {
 
   // ---------- PWA bits and the web app ----------
 
-  const iconFile = (size) => {
-    const s = getSettings(db);
-    const custom = size === 512 ? s.icon512 : s.icon192;
-    if (isUpload(custom)) {
-      const file = path.join(uploadDir, path.basename(custom));
-      if (fs.existsSync(file)) return file;
-    }
-    return path.join(DIST, 'icons', `icon-${size}.png`);
-  };
-
+  // The browser-tab and home-screen icon is always the built-in one. The logo is
+  // not used, because a logo made to sit on a dark header (often white) would
+  // be close to invisible as an icon.
   app.get(['/app-icon-192.png', '/app-icon-512.png'], (req, res) => {
     res.set('Cache-Control', 'no-cache');
-    res.sendFile(iconFile(req.path.includes('512') ? 512 : 192), (error) => {
+    const size = req.path.includes('512') ? 512 : 192;
+    res.sendFile(path.join(DIST, 'icons', `icon-${size}.png`), (error) => {
       if (error && !res.headersSent) res.status(404).end();
     });
   });
 
   app.get('/manifest.webmanifest', (req, res) => {
     const s = getSettings(db);
-    const v = encodeURIComponent(s.icon512 || 'default');
     const theme = resolveTheme(s.theme, parseCustom(s.theme_custom));
     res.set('Cache-Control', 'no-cache');
     res.type('application/manifest+json').send(
@@ -1107,9 +1100,9 @@ export function createApp(db, { uploadDir }) {
         background_color: theme.bg,
         theme_color: theme.header,
         icons: [
-          { src: `/app-icon-192.png?v=${v}`, sizes: '192x192', type: 'image/png', purpose: 'any' },
-          { src: `/app-icon-512.png?v=${v}`, sizes: '512x512', type: 'image/png', purpose: 'any' },
-          { src: `/app-icon-512.png?v=${v}`, sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: `/app-icon-192.png`, sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: `/app-icon-512.png`, sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: `/app-icon-512.png`, sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       }),
     );

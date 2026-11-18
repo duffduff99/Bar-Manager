@@ -93,6 +93,11 @@ const MIGRATIONS = [
     PRIMARY KEY (recipe_id, tag_id)
   );
   `,
+  // The app icon used to be made from the uploaded logo. It is now always the
+  // default icon, so drop any icons that were made that way.
+  `
+  DELETE FROM settings WHERE key IN ('icon192', 'icon512');
+  `,
 ];
 
 export function openDatabase(file) {
@@ -119,8 +124,6 @@ export const DEFAULT_SETTINGS = {
   tagline: 'Pull up a stool.',
   units: 'oz',
   logo: '',
-  icon192: '',
-  icon512: '',
   public_url: '',
   tv_interval: '15',
   tv_message: 'Scan for the full menu',
@@ -134,7 +137,7 @@ export const DEFAULT_SETTINGS = {
 };
 
 /** Settings that hold an uploaded picture. */
-export const IMAGE_SETTINGS = ['logo', 'icon192', 'icon512', 'tv_background'];
+export const IMAGE_SETTINGS = ['logo', 'tv_background'];
 /** Settings stored as '1' or '0'. */
 export const FLAG_SETTINGS = ['tv_logo_slide', 'tv_board_slide', 'tv_all_drinks'];
 

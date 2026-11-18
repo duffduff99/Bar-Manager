@@ -3,7 +3,7 @@ import { CUSTOM_KEYS, parseCustom, resolveTheme, THEMES, type CustomColours } fr
 import { api, get, type Settings, type User } from '../../api';
 import { useApp } from '../../app';
 import { Loading } from '../../components/ui';
-import { shrink, squareIcon, upload } from '../../images';
+import { shrink, upload } from '../../images';
 
 interface Category {
   id: number;
@@ -53,13 +53,8 @@ function BarSettings() {
     if (!file) return;
     setBusy(true);
     try {
-      // One upload for the logo itself and two square versions for the home-screen icon.
-      const [logo, icon192, icon512] = await Promise.all([
-        shrink(file, 800, 'image/png').then(upload),
-        squareIcon(file, 192).then(upload),
-        squareIcon(file, 512).then(upload),
-      ]);
-      await store({ logo, icon192, icon512 }, 'Logo updated.');
+      const logo = await upload(await shrink(file, 800, 'image/png'));
+      await store({ logo }, 'Logo updated.');
     } catch (e) {
       fail(e);
       setBusy(false);
@@ -124,13 +119,13 @@ function BarSettings() {
               />
             </label>
             {settings.logo && (
-              <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => store({ logo: '', icon192: '', icon512: '' }, 'Logo removed.')}>
+              <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => store({ logo: '' }, 'Logo removed.')}>
                 Remove
               </button>
             )}
             <small className="muted">
-              Shown on the menu header (a dark background) and the TV, and used as the app icon. A PNG with a
-              transparent background works best.
+              Shown on the menu header and the TV, both of which have a dark background, so a white or light
+              logo on a transparent background works best. The browser tab and home-screen icon stay the default.
             </small>
           </div>
         </div>

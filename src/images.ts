@@ -43,22 +43,6 @@ export async function shrink(file: Blob, max: number, type: 'image/jpeg' | 'imag
   return toBlob(canvas, type, 0.86);
 }
 
-/** A square home-screen icon: the logo centred on a plain background. */
-export async function squareIcon(file: Blob, size: number): Promise<Blob> {
-  const img = await load(file);
-  const canvas = document.createElement('canvas');
-  canvas.width = canvas.height = size;
-  const ctx = canvas.getContext('2d')!;
-  ctx.fillStyle = '#f4ead8';
-  ctx.fillRect(0, 0, size, size);
-  const width = img.naturalWidth || 512;
-  const height = img.naturalHeight || 512;
-  // Keep the logo inside the middle 70% so rounded and circular icon masks do not clip it.
-  const scale = (size * 0.7) / Math.max(width, height);
-  ctx.drawImage(img, (size - width * scale) / 2, (size - height * scale) / 2, width * scale, height * scale);
-  return toBlob(canvas, 'image/png');
-}
-
 export async function upload(blob: Blob): Promise<string> {
   return (await api<{ url: string }>('POST', '/api/admin/upload', blob)).url;
 }
