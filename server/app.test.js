@@ -368,3 +368,24 @@ test('an ingredient can be deleted once no recipe uses it', async () => {
   assert.equal(removed.status, 200);
   assert.ok(!removed.data.types.some((t) => t.name === 'Banana Liqueur'));
 });
+
+test('the app icon stays the default when a logo is uploaded', async () => {
+  const before = await fetch(base + '/app-icon-192.png');
+  const beforeBytes = Buffer.from(await before.arrayBuffer());
+  const png = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
+    'base64',
+  );
+  const logo = (await call('POST', '/api/admin/upload', png, { raw: true })).data.url;
+  // Even a request that still sends the old icon fields leaves the icon alone.
+  await call('PUT', '/api/admin/settings', { logo, icon192: logo, icon512: logo });
+  const after = await fetch(base + '/app-icon-192.png');
+  assert.equal(after.status, before.status);
+  assert.ok(Buffer.from(await after.arrayBuffer()).equals(beforeBytes), 'icon unchanged');
+  const manifest = await (await fetch(base + '/manifest.webmanifest')).json();
+  assert.deepEqual(
+    manifest.icons.map((i) => i.src),
+    ['/app-icon-192.png', '/app-icon-512.png', '/app-icon-512.png'],
+  );
+  assert.equal((await call('GET', '/api/admin/settings')).data.settings.icon192, undefined);
+});

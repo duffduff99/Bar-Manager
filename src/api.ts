@@ -162,8 +162,6 @@ export interface Settings {
   tagline: string;
   units: Units;
   logo: string;
-  icon192: string;
-  icon512: string;
   public_url: string;
   tv_interval: string;
   tv_message: string;
