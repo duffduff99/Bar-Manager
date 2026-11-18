@@ -13,7 +13,7 @@ get a live menu that only lists the drinks you can make right now.
   Import from a recipe link or pasted text.
 - **Shopping** list of what is low or out, plus single purchases that would unlock new drinks.
 - **TV display** at `/tv`: featured drinks, a full-screen logo slide, a menu board, an optional
-  announcement, and a QR code for the menu.
+  announcement, and a QR code for the menu. Setup guide: [docs/tv-setup.md](docs/tv-setup.md).
 - **Themes**: eight colour themes, including Halloween, Thanksgiving, Christmas and New Year's,
   each with adjustable colours.
 - **Installable** as an app on a phone (PWA).
@@ -119,17 +119,9 @@ you choose what it shows:
 - an announcement slide with your own text;
 - an optional background picture in place of the theme colour.
 
-- **From a laptop:** open `/tv` in Chrome and use Cast > Cast tab.
-- **From Home Assistant:** the built-in Cast integration only casts Home Assistant dashboards.
-  For an arbitrary web page, use the community
-  [DashCast integration](https://github.com/AlexxIT/DashCast) (`dash_cast.load_url` with your
-  media player and the `/tv` address), or the `catt` command line tool (`catt cast_site <url>`).
-
-Two things commonly trip this up. A Chromecast needs to resolve the address itself, and many of
-them ignore the DNS server handed out by your router and ask Google's instead, so a name that
-only exists in local DNS may not load. It also needs a certificate it trusts, so a private
-certificate authority will not work; a public certificate (for example Let's Encrypt through a
-DNS challenge) will.
+To put it on a television, see [docs/tv-setup.md](docs/tv-setup.md). It covers the network
+and certificate requirements, a Raspberry Pi kiosk that is safe to power from the TV (read-only
+mode), Home Assistant with DashCast, and casting a browser tab.
 
 ## Development
 
